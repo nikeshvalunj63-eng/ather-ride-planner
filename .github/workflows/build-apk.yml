@@ -43,6 +43,11 @@ jobs:
           test -f source/settings.gradle.kts
           test -f source/app/build.gradle.kts
 
+      - name: Fix KSP CI compatibility
+        run: |
+          sed -i 's/googleDevtoolsKsp = "2.3.5"/googleDevtoolsKsp = "2.3.6"/' "$GITHUB_WORKSPACE/source/gradle/libs.versions.toml"
+          grep googleDevtoolsKsp "$GITHUB_WORKSPACE/source/gradle/libs.versions.toml"
+          
       - name: Build debug APK
         run: |
           gradle -p source :app:assembleDebug --no-daemon
