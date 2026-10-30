@@ -1,0 +1,57 @@
+name: Build EV Ride Planner APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "ev-ride-planner-oct-29-2026-11-56-16-pm.zip"
+      - ".github/workflows/build-apk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
+
+      - name: Install Android SDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-36.1" \
+            "build-tools;36.0.0"
+
+      - name: Extract project
+        run: |
+          mkdir source
+          unzip -q ev-ride-planner-oct-29-2026-11-56-16-pm.zip -d source
+          test -f source/settings.gradle.kts
+          test -f source/app/build.gradle.kts
+
+      - name: Build debug APK
+        run: |
+          gradle -p source :app:assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ev-ride-planner-debug-apk
+          path: source/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+          
