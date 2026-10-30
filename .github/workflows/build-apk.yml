@@ -1,3 +1,4 @@
+
 name: Build EV Ride Planner APK
 
 on:
@@ -36,7 +37,7 @@ jobs:
             "platforms;android-36.1" \
             "build-tools;36.0.0"
 
-      - name: Extract project
+      - name: Extract Android project
         run: |
           mkdir source
           unzip -q ev-ride-planner-oct-29-2026-11-56-16-pm.zip -d source
@@ -45,9 +46,22 @@ jobs:
 
       - name: Fix KSP CI compatibility
         run: |
-          sed -i 's/googleDevtoolsKsp = "2.3.5"/googleDevtoolsKsp = "2.3.6"/' "$GITHUB_WORKSPACE/source/gradle/libs.versions.toml"
-          grep googleDevtoolsKsp "$GITHUB_WORKSPACE/source/gradle/libs.versions.toml"
-          
+          sed -i 's/googleDevtoolsKsp = "2.3.5"/googleDevtoolsKsp = "2.3.6"/' source/gradle/libs.versions.toml
+          grep googleDevtoolsKsp source/gradle/libs.versions.toml
+
+      - name: Generate debug signing key
+        run: |
+          keytool -genkeypair -v \
+            -keystore source/debug.keystore \
+            -storetype JKS \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
       - name: Build debug APK
         run: |
           gradle -p source :app:assembleDebug --no-daemon
