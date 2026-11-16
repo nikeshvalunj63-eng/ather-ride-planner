@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - "ev-ride-planner-oct-29-2026-11-56-16-pm.zip"
+      - "ev-ride-planner-nov-16-2026-6-10-45-am.zip"
       - ".github/workflows/build-apk.yml"
 
 permissions:
@@ -13,13 +13,14 @@ permissions:
 
 jobs:
   build:
+    name: Build Android Debug APK
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -33,20 +34,33 @@ jobs:
       - name: Install Android SDK
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses
+
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
             "platforms;android-36.1" \
             "build-tools;36.0.0"
 
       - name: Extract Android project
         run: |
-          mkdir source
-          unzip -q ev-ride-planner-oct-29-2026-11-56-16-pm.zip -d source
-          test -f source/settings.gradle.kts
-          test -f source/app/build.gradle.kts
+          mkdir -p source
 
-      - name: Fix KSP CI compatibility
+          unzip -q \
+            ev-ride-planner-nov-16-2026-6-10-45-am.zip \
+            -d source
+
+          test -f source/settings.gradle.kts
+          test -f source/build.gradle.kts
+          test -f source/app/build.gradle.kts
+          test -f source/app/google-services.json
+
+      - name: Verify project configuration
         run: |
-          sed -i 's/googleDevtoolsKsp = "2.3.5"/googleDevtoolsKsp = "2.3.6"/' source/gradle/libs.versions.toml
+          echo "Gradle version:"
+          grep distributionUrl source/gradle/wrapper/gradle-wrapper.properties
+
+          echo "Android SDK configuration:"
+          grep -E 'compileSdk|targetSdk|minSdk' source/app/build.gradle.kts
+
+          echo "KSP version:"
           grep googleDevtoolsKsp source/gradle/libs.versions.toml
 
       - name: Generate debug signing key
@@ -66,6 +80,15 @@ jobs:
         run: |
           gradle -p source :app:assembleDebug --no-daemon
 
+      - name: Verify APK
+        run: |
+          APK="source/app/build/outputs/apk/debug/app-debug.apk"
+
+          test -f "$APK"
+
+          echo "APK successfully generated!"
+          ls -lh "$APK"
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
@@ -73,4 +96,3 @@ jobs:
           path: source/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
-          
